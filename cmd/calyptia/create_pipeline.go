@@ -32,6 +32,7 @@ func newCmdCreatePipeline(config *config) *cobra.Command {
 	var outputFormat string
 	var metadataPairs []string
 	var metadataFile string
+	var configFormat string
 
 	cmd := &cobra.Command{
 		Use:   "pipeline",
@@ -90,9 +91,19 @@ func newCmdCreatePipeline(config *config) *cobra.Command {
 				return err
 			}
 
+			switch configFormat {
+			case "ini":
+			case "json":
+			case "yaml":
+			default:
+				return fmt.Errorf("unknown configuration format: %s", configFormat)
+			}
+
+			cformat := cloud.ConfigFormat(configFormat)
 			a, err := config.cloud.CreatePipeline(config.ctx, aggregatorID, cloud.CreatePipeline{
 				Name:                      name,
 				ReplicasCount:             replicasCount,
+				ConfigFormat:              &cformat,
 				RawConfig:                 string(rawConfig),
 				Secrets:                   secrets,
 				AutoCreatePortsFromConfig: autoCreatePortsFromConfig,
@@ -140,6 +151,7 @@ func newCmdCreatePipeline(config *config) *cobra.Command {
 	fs.StringSliceVar(&metadataPairs, "metadata", nil, "Metadata to attach to the pipeline in the form of key:value. You could instead use a file with the --metadata-file option")
 	fs.StringVar(&metadataFile, "metadata-file", "", "Metadata JSON file to attach to the pipeline intead of passing multiple --metadata flags")
 	fs.StringVar(&outputFormat, "output-format", "table", "Output format. Allowed: table, json")
+	fs.StringVar(&configFormat, "config-format", "ini", "Config format. Allowed: ini, json, yaml")
 
 	_ = cmd.RegisterFlagCompletionFunc("aggregator", config.completeAggregators)
 	_ = cmd.RegisterFlagCompletionFunc("secrets-format", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
