@@ -80,12 +80,15 @@ func newCmdGetPipeline(config *config) *cobra.Command {
 	var includeEndpoints, includeConfigHistory, includeSecrets bool
 	var showIDs bool
 	var format string
+	var configFormat string
+
 	cmd := &cobra.Command{
 		Use:               "pipeline PIPELINE",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: config.completePipelines,
 		Short:             "Display a pipelines by ID or name",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cformat := cloud.ConfigFormat(configFormat)
 			pipelineKey := args[0]
 			pipelineID, err := config.loadPipelineID(pipelineKey)
 			if err != nil {
@@ -100,7 +103,9 @@ func newCmdGetPipeline(config *config) *cobra.Command {
 				g, gctx := errgroup.WithContext(config.ctx)
 				g.Go(func() error {
 					var err error
-					pip, err = config.cloud.Pipeline(config.ctx, pipelineID)
+					pip, err = config.cloud.Pipeline(config.ctx, pipelineID, cloud.PipelineParams{
+						ConfigFormat: &cformat,
+					})
 					if err != nil {
 						return fmt.Errorf("could not fetch your pipeline: %w", err)
 					}
@@ -150,7 +155,7 @@ func newCmdGetPipeline(config *config) *cobra.Command {
 				}
 			} else {
 				var err error
-				pip, err = config.cloud.Pipeline(config.ctx, pipelineID)
+				pip, err = config.cloud.Pipeline(config.ctx, pipelineID, cloud.PipelineParams{ConfigFormat: &cformat})
 				if err != nil {
 					return fmt.Errorf("could not fetch your pipeline: %w", err)
 				}
@@ -208,6 +213,7 @@ func newCmdGetPipeline(config *config) *cobra.Command {
 	fs.Uint64Var(&lastConfigHistory, "last-config-history", 0, "Last `N` pipeline config history if included. 0 means no limit")
 	fs.Uint64Var(&lastSecrets, "last-secrets", 0, "Last `N` pipeline secrets if included. 0 means no limit")
 	fs.StringVarP(&format, "output-format", "o", "table", "Output format. Allowed: table, json")
+	fs.StringVar(&configFormat, "config-format", "ini", "Config Format. Allowed: ini, yaml, josn")
 
 	fs.BoolVar(&showIDs, "show-ids", false, "Include IDs in table output")
 

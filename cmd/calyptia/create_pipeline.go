@@ -103,7 +103,7 @@ func newCmdCreatePipeline(config *config) *cobra.Command {
 			a, err := config.cloud.CreatePipeline(config.ctx, aggregatorID, cloud.CreatePipeline{
 				Name:                      name,
 				ReplicasCount:             replicasCount,
-				ConfigFormat:              &cformat,
+				ConfigFormat:              cformat,
 				RawConfig:                 string(rawConfig),
 				Secrets:                   secrets,
 				AutoCreatePortsFromConfig: autoCreatePortsFromConfig,

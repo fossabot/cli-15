@@ -28,6 +28,7 @@ func newCmdUpdatePipeline(config *config) *cobra.Command {
 	var outputFormat string
 	var metadataPairs []string
 	var metadataFile string
+	var configFormat string
 
 	cmd := &cobra.Command{
 		Use:               "pipeline PIPELINE",
@@ -44,6 +45,16 @@ func newCmdUpdatePipeline(config *config) *cobra.Command {
 
 				rawConfig = string(b)
 			}
+
+			switch configFormat {
+			case "ini":
+			case "json":
+			case "yaml":
+			default:
+				return fmt.Errorf("unknown configuration format: %s", configFormat)
+			}
+
+			cformat := cloud.ConfigFormat(configFormat)
 
 			secrets, err := parseUpdatePipelineSecrets(secretsFile, secretsFormat)
 			if err != nil {
@@ -107,6 +118,7 @@ func newCmdUpdatePipeline(config *config) *cobra.Command {
 			}
 			if rawConfig != "" {
 				update.RawConfig = &rawConfig
+				update.ConfigFormat = &cformat
 			}
 
 			updated, err := config.cloud.UpdatePipeline(config.ctx, pipelineID, update)
@@ -149,6 +161,7 @@ func newCmdUpdatePipeline(config *config) *cobra.Command {
 	fs.StringSliceVar(&metadataPairs, "metadata", nil, "Metadata to attach to the pipeline in the form of key:value. You could instead use a file with the --metadata-file option")
 	fs.StringVar(&metadataFile, "metadata-file", "", "Metadata JSON file to attach to the pipeline intead of passing multiple --metadata flags")
 	fs.StringVar(&outputFormat, "output-format", "table", "Output format. Allowed: table, json")
+	fs.StringVar(&configFormat, "config-format", "ini", "Config file format. Allowed: json, yaml, ini")
 
 	_ = cmd.RegisterFlagCompletionFunc("output-format", config.completeOutputFormat)
 
