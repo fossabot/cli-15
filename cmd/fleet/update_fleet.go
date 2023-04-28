@@ -20,6 +20,7 @@ func NewCmdUpdateFleet(config *cfg.Config) *cobra.Command {
 	var in types.UpdateFleet
 	var configFile, configFormat string
 	var outputFormat, goTemplate string
+	var tags string
 	completer := completer.Completer{Config: config}
 
 	cmd := &cobra.Command{
@@ -40,11 +41,18 @@ func NewCmdUpdateFleet(config *cfg.Config) *cobra.Command {
 			}
 			in.ID = fleetID
 
-			cfg, err := readConfig(configFile, configFormat)
-			if err != nil {
-				return err
+			if configFile != "" {
+				cfg, err := readConfig(configFile, configFormat)
+				if err != nil {
+					return err
+				}
+				in.Config = &cfg
 			}
-			in.Config = &cfg
+
+			if tags != "" {
+				atags := strings.Split(tags, ",")
+				in.Tags = &atags
+			}
 
 			updated, err := config.Cloud.UpdateFleet(ctx, in)
 			if err != nil {
@@ -73,8 +81,9 @@ func NewCmdUpdateFleet(config *cfg.Config) *cobra.Command {
 	}
 
 	fs := cmd.Flags()
-	fs.StringVar(&configFile, "config-file", "fluent-bit.yaml", "Fluent-bit config file")
+	fs.StringVar(&configFile, "config-file", "", "Fluent-bit config file")
 	fs.StringVar(&configFormat, "config-format", "", "Optional fluent-bit config format (classic, yaml, json)")
+	fs.StringVar(&tags, "tags", "", "Optional tags delimited by commas")
 	fs.BoolVar(&in.SkipConfigValidation, "skip-config-validation", false, "Option to skip fluent-bit config validation (not recommended)")
 	fs.StringVarP(&outputFormat, "output-format", "o", "table", "Output format. Allowed: table, json, yaml, go-template, go-template-file")
 	fs.StringVar(&goTemplate, "template", "", "Template string or path to use when -o=go-template, -o=go-template-file. The template format is golang templates\n[http://golang.org/pkg/text/template/#pkg-overview]")
