@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	goversion "github.com/hashicorp/go-version"
+
 	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -490,8 +492,9 @@ func (client *Client) FindDeploymentByLabel(ctx context.Context, label string) (
 	return client.AppsV1().Deployments(client.Namespace).List(ctx, metav1.ListOptions{LabelSelector: label})
 }
 
-func (client *Client) DeployCoreOperatorSync(ctx context.Context, coreInstance cloud.CreatedCoreInstance, serviceAccount string) (*appsv1.Deployment, error) {
+func (client *Client) DeployCoreOperatorSync(ctx context.Context, version string, coreInstance cloud.CreatedCoreInstance, serviceAccount string) (*appsv1.Deployment, error) {
 	labels := client.LabelsFunc()
+	//TODO: SEARCH FOR THE INFORMED VERSION
 	const toCloudImage = "ghcr.io/calyptia/core-operator/sync-to-cloud:v1.0.0-alpha0"
 	const fromCloudImage = "ghcr.io/calyptia/core-operator/sync-from-cloud:v1.0.0-alpha0"
 	env := []apiv1.EnvVar{
@@ -565,6 +568,7 @@ func (client *Client) DeployOperator(ctx context.Context, version string) ([]Res
 	if err != nil {
 		return nil, err
 	}
+	file, _ = os.ReadFile("manifest.yaml")
 	applied, err := client.applyOperatorManifest(ctx, file)
 	if err != nil {
 		return applied, err
@@ -795,4 +799,25 @@ func (client *Client) isDeploymentReady(ctx context.Context, d *appsv1.Deploymen
 		}
 		return true, nil
 	}
+}
+
+// ClusterInfo information that is retrieved from the running cluster.
+type ClusterInfo struct {
+	Namespace, Platform, Version string
+}
+
+func (client *Client) GetClusterInfo() (ClusterInfo, error) {
+	var info ClusterInfo
+	serverVersion, err := client.Discovery().ServerVersion()
+	if err != nil {
+		return info, fmt.Errorf("error getting kubernetes version: %w", err)
+	}
+	version, err := goversion.NewVersion(serverVersion.String())
+	if err != nil {
+		return info, fmt.Errorf("could not parse version from kubernetes cluster: %w", err)
+	}
+	info.Version = version.String()
+	info.Namespace = client.Namespace
+	info.Platform = serverVersion.Platform
+	return info, nil
 }

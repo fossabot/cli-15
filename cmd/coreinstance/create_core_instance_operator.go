@@ -187,7 +187,7 @@ func newCmdCreateCoreInstanceOperator(config *cfg.Config, testClientSet kubernet
 				return err
 			}
 
-			syncDeployment, err := k8sClient.DeployCoreOperatorSync(ctx, created, serviceAccount.Name)
+			syncDeployment, err := k8sClient.DeployCoreOperatorSync(ctx, coreInstanceVersion, created, serviceAccount.Name)
 			if err != nil {
 				fmt.Printf("An error occurred while creating the core operator instance. %w Rolling back created resources.\n", err)
 				resources, err := k8sClient.DeleteResources(ctx, resourcesCreated)
@@ -212,6 +212,19 @@ func newCmdCreateCoreInstanceOperator(config *cfg.Config, testClientSet kubernet
 				return err
 			}
 
+			metadata, err := getCoreInstanceMetadata(k8sClient)
+			if err != nil {
+				return err
+			}
+
+			updateCoreInstance := cloud.UpdateCoreInstance{
+				Version:  &coreInstanceVersion,
+				Metadata: &metadata,
+			}
+			err = config.Cloud.UpdateCoreInstance(ctx, created.ID, updateCoreInstance)
+			if err != nil {
+				return err
+			}
 			fmt.Printf("Core instance created successfully\n")
 			fmt.Printf("Resources created:\n")
 
@@ -266,4 +279,19 @@ func extractRollBack(name string, obj runtime.Object) (k8s.ResourceRollBack, err
 		GVR:  resource,
 	}
 	return back, err
+}
+
+func getCoreInstanceMetadata(k8s *k8s.Client) (cloud.CoreInstanceMetadata, error) {
+	var metadata cloud.CoreInstanceMetadata
+
+	info, err := k8s.GetClusterInfo()
+	if err != nil {
+		return metadata, err
+	}
+
+	metadata.Namespace = info.Namespace
+	metadata.ClusterVersion = info.Version
+	metadata.ClusterPlatform = info.Platform
+
+	return metadata, nil
 }
