@@ -511,6 +511,10 @@ func (client *Client) DeployCoreOperatorSync(ctx context.Context, coreInstance c
 			Name:  "TOKEN",
 			Value: client.ProjectToken,
 		},
+		{
+			Name:  "INTERVAL",
+			Value: "15s",
+		},
 	}
 	toCloud := apiv1.Container{
 		Name:            coreInstance.Name + "-sync-to-cloud",
